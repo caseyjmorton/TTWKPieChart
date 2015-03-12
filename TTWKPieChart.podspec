@@ -8,7 +8,7 @@ Pod::Spec.new do |s|
                        DESC
 
   s.homepage         = "https://github.com/touchtribe/TTWKPieChart"
-  s.screenshots      = 'https://raw.githubusercontent.com/TouchTribe/TTWKActivityIndicator/master/Screenshot-AppleWatch.gif'
+  s.screenshots      = 'https://raw.githubusercontent.com/TouchTribe/TTWKPieChart/master/Screenshot-AppleWatch.gif'
   s.license          = 'MIT'
   s.author           = { "TouchTribe B.V." => "info@touchtribe.nl" }
   s.source           = { :git => "https://github.com/touchtribe/TTWKPieChart.git", :tag => s.version.to_s }
