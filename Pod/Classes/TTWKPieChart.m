@@ -296,6 +296,8 @@ static inline CGFloat TTWKRetinaRound(x) {
 			size.height *= t;
 
 			CGPoint startPoint = [self pointForBandWithIndex:bandIndex center:center angle:startAngle];
+			startPoint.x = TTWKRetinaRound(startPoint.x);
+			startPoint.y = TTWKRetinaRound(startPoint.y);
 			[icon
 				drawInRect:CGRectMake(
 					startPoint.x - size.width * 0.5,
@@ -351,7 +353,7 @@ static inline CGFloat TTWKRetinaRound(x) {
 			CGSize size = [caption size];
 			[caption
 				drawAtPoint:CGPointMake(
-					startPoint.x - size.width,
+					TTWKRetinaRound(startPoint.x - size.width),
 					TTWKRetinaRound(startPoint.y - size.height * 0.5)
 				)
 			];
