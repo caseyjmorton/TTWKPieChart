@@ -10,7 +10,7 @@
             <objects>
                 <controller title="TTWKPieChart" id="AgC-eL-Hgc" customClass="InterfaceController">
                     <items>
-                        <imageView alignment="center" verticalAlignment="center" contentMode="center" id="3Z4-Pw-NLE"/>
+                        <imageView alignment="center" verticalAlignment="center" id="3Z4-Pw-NLE"/>
                     </items>
                     <connections>
                         <outlet property="chartImage" destination="3Z4-Pw-NLE" id="BTl-fH-qrN"/>

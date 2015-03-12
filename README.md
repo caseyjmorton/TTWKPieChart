@@ -2,6 +2,8 @@
 
 A component that simplifies creating of AppleWatch-style pie charts similar to the ones displayed by the Activity app.
 
+![](Screenshot-AppleWatch.gif) 
+
 ## Usage
 
 To run the example project, clone the repo, and run `pod install` from the Example directory first.
