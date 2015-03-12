@@ -13,6 +13,11 @@ static inline CGFloat TTWKRetinaRound(x) {
 	return roundf(x * 2) / 2;
 }
 
+/** Rounds to the neares half of retina pixel. */
+static inline CGFloat TTWKRetinaRoundHalf(x) {
+	return roundf(x * 4) / 4;
+}
+
 @implementation TTWKPieChart {
 	// These constants determine between which two points of the band (by angles) the linear gradient is drawn,
 	// it seems that there is no much sense in making these public at this point
@@ -296,8 +301,8 @@ static inline CGFloat TTWKRetinaRound(x) {
 			size.height *= t;
 
 			CGPoint startPoint = [self pointForBandWithIndex:bandIndex center:center angle:startAngle];
-			startPoint.x = TTWKRetinaRound(startPoint.x);
-			startPoint.y = TTWKRetinaRound(startPoint.y);
+			startPoint.x = TTWKRetinaRoundHalf(startPoint.x);
+			startPoint.y = TTWKRetinaRoundHalf(startPoint.y);
 			[icon
 				drawInRect:CGRectMake(
 					startPoint.x - size.width * 0.5,
@@ -348,12 +353,12 @@ static inline CGFloat TTWKRetinaRound(x) {
 			}
 
 			CGPoint startPoint = [self pointForBandWithIndex:bandIndex center:center angle:startAngle];
-			startPoint.x -= _captionPadding + _bandWidth * 0.5;
+			startPoint.x = TTWKRetinaRound(startPoint.x - (_captionPadding + _bandWidth * 0.5));
 
 			CGSize size = [caption size];
 			[caption
 				drawAtPoint:CGPointMake(
-					TTWKRetinaRound(startPoint.x - size.width),
+					startPoint.x - size.width,
 					TTWKRetinaRound(startPoint.y - size.height * 0.5)
 				)
 			];
