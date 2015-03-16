@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="6751" systemVersion="13F34" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" initialViewController="vXZ-lx-hvc">
     <dependencies>
-        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="6736"/>
     </dependencies>
     <scenes>
@@ -18,16 +17,16 @@
                         <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                         <subviews>
                             <imageView userInteractionEnabled="NO" contentMode="center" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="mjd-MU-fgp">
-                                <rect key="frame" x="24" y="124" width="272" height="320"/>
+                                <rect key="frame" x="24" y="28" width="272" height="272"/>
                                 <constraints>
-                                    <constraint firstAttribute="height" constant="320" id="6YR-d5-onv"/>
+                                    <constraint firstAttribute="height" constant="272" id="6YR-d5-onv"/>
                                     <constraint firstAttribute="width" constant="272" id="I4G-VX-IXU"/>
                                 </constraints>
                             </imageView>
                         </subviews>
                         <color key="backgroundColor" white="1" alpha="1" colorSpace="calibratedWhite"/>
                         <constraints>
-                            <constraint firstAttribute="centerY" secondItem="mjd-MU-fgp" secondAttribute="centerY" id="PhG-ky-8Au"/>
+                            <constraint firstItem="mjd-MU-fgp" firstAttribute="top" secondItem="jyV-Pf-zRb" secondAttribute="bottom" constant="8" id="URW-mX-b25"/>
                             <constraint firstAttribute="centerX" secondItem="mjd-MU-fgp" secondAttribute="centerX" id="pg3-Gp-cRH"/>
                         </constraints>
                     </view>

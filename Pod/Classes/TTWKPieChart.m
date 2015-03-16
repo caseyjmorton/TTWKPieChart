@@ -7,15 +7,11 @@
 
 #import "TTWKPieChart.h"
 #import <CoreText/CoreText.h>
+#import <UIKit/NSStringDrawing.h>
 
-/** Rounds to the neares half of a point, handy for 2x-retina used on AppleWatch. */
+/** Rounds to the neares half of a point, handy for 2x-retina used on Apple Watch. */
 static inline CGFloat TTWKRetinaRound(x) {
 	return roundf(x * 2) / 2;
-}
-
-/** Rounds to the neares half of retina pixel. */
-static inline CGFloat TTWKRetinaRoundHalf(x) {
-	return roundf(x * 4) / 4;
 }
 
 @implementation TTWKPieChart {
@@ -37,6 +33,7 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 		_bandSpacing = 1;
 		_animationDuration = 2;
 		_captionPadding = 2;
+		_autoHideCaptions = YES;
 
 		// TODO: this should be just a constant instead, the gradient starting at the beginning of the band
 		// and ending at 6 o'clock (with the rest of the band always using the highlight color) seems reasonable
@@ -44,7 +41,7 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 		_gradientEndAngle = 0.5 * (2 * M_PI);
 
 		// Well, this font might be not accessible in regular apps, but let's try at least
-		_font = [UIFont fontWithName:@"SanFranciscoText-Regular" size:13];
+		_captionFont = [UIFont fontWithName:@"SanFranciscoText-Regular" size:13];
 
 		// Let's keep a few default bands here as well just in case
 		_bands = @[
@@ -63,7 +60,7 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 	CGFloat maxCaptionWidth = 0;
 	for (TTWKPieChartBand *band in _bands) {
 		if (band.caption) {
-			CGSize s = [band.caption sizeWithAttributes:@{ NSFontAttributeName : [self captionFont] }];
+			CGSize s = [band.caption sizeWithAttributes:@{ NSFontAttributeName : [self effectiveCaptionFont] }];
 			CGFloat w = ceilf(s.width + _captionPadding + _bandWidth * 0.5);
 			if (w > maxCaptionWidth) {
 				maxCaptionWidth = w;
@@ -78,9 +75,14 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 }
 
 - (UIImage *)animatedImage {
+	return [self animatedImageWithFrameRate:30];
+}
 
-	CGFloat framesPerSecond = 30;
-	NSInteger numberOfFrames = _animationDuration * framesPerSecond;
+- (UIImage *)animatedImageWithFrameRate:(CGFloat)frameRate {
+
+	NSAssert(frameRate > 1, @"");
+
+	NSInteger numberOfFrames = _animationDuration * frameRate;
 	NSMutableArray *images = [[NSMutableArray alloc] initWithCapacity:numberOfFrames];
 
 	for (NSInteger frameIndex = 0; frameIndex <= numberOfFrames; frameIndex++) {
@@ -177,11 +179,21 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 	return [UIColor colorWithCGColor:result];
 }
 
+- (UIColor *)colorFromColor:(UIColor *)color withAlphaMultipliedBy:(CGFloat)t {
+	CGColorRef result = CGColorCreateCopyWithAlpha(color.CGColor, CGColorGetAlpha(color.CGColor) * t);
+	return [UIColor colorWithCGColor:result];
+}
+
+- (CGPoint)chartCenter {
+	CGSize size = [self size];
+	return CGPointMake(size.width * 0.5, size.height * 0.5);
+}
+
 - (UIImage *)imageForTime:(NSTimeInterval)time {
 
 	CGSize size = [self size];
 	CGRect b = CGRectMake(0, 0, size.width, size.height);
-	CGPoint center = CGPointMake(b.origin.x + b.size.width * 0.5, b.origin.y + b.size.height * 0.5);
+	CGPoint center = [self chartCenter];
 
 	UIGraphicsBeginImageContextWithOptions(b.size, NO, 2);
 
@@ -301,8 +313,8 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 			size.height *= t;
 
 			CGPoint startPoint = [self pointForBandWithIndex:bandIndex center:center angle:startAngle];
-			startPoint.x = TTWKRetinaRoundHalf(startPoint.x);
-			startPoint.y = TTWKRetinaRoundHalf(startPoint.y);
+			startPoint.x = TTWKRetinaRound(startPoint.x);
+			startPoint.y = TTWKRetinaRound(startPoint.y);
 			[icon
 				drawInRect:CGRectMake(
 					startPoint.x - size.width * 0.5,
@@ -322,48 +334,60 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 
 			UIColor *captionColor = band.captionColor ?: band.startColor;
 
+			// Must be right aligned to avoid characters being moved too much
+			NSMutableParagraphStyle *ps = [[NSMutableParagraphStyle alloc] init];
+			ps.alignment = NSTextAlignmentRight;
+
 			NSMutableAttributedString *caption = [[NSMutableAttributedString alloc]
 				initWithString:band.caption
 				attributes:@{
-					NSFontAttributeName : [self captionFont],
+					NSFontAttributeName : [self effectiveCaptionFont],
 					NSForegroundColorAttributeName : captionColor,
-					NSKernAttributeName : @(0)
+					NSParagraphStyleAttributeName : ps
 				}
 			];
 
-			CGFloat t = 1 - [self easeOut:[self normalizedTimeForTime:time start:_animationDuration * 0.5 duration:_animationDuration * 0.5]];
-			NSInteger numberOfVisibleCharacters = floor(caption.length * t);
-			NSInteger numberOfInvisibleCharacters = caption.length - numberOfVisibleCharacters;
+			if (_autoHideCaptions) {
 
-			[caption
-				setAttributes:@{ NSForegroundColorAttributeName : [UIColor colorWithWhite:1 alpha:0] }
-				range:NSMakeRange(0, numberOfInvisibleCharacters)
-			];
+				CGFloat t = 1 - [self easeOut:[self normalizedTimeForTime:time start:_animationDuration * 0.6 duration:_animationDuration * 0.4]];
+				NSInteger numberOfVisibleCharacters = floor(caption.length * t);
+				NSInteger numberOfInvisibleCharacters = caption.length - numberOfVisibleCharacters;
 
-			if (numberOfInvisibleCharacters > 0 && numberOfVisibleCharacters >= 1) {
-				CGFloat maxKerningAdjustement = [self captionFont].xHeight / 2;
-				CGFloat characterTime = (1 - (caption.length * t - numberOfVisibleCharacters));
 				[caption
-					addAttributes:@{
-						NSKernAttributeName : @(-maxKerningAdjustement * characterTime),
-						NSForegroundColorAttributeName : [self colorFromColor:captionColor withAlpha:1 - characterTime]
-					}
-					range:NSMakeRange(numberOfInvisibleCharacters, 1)
+					setAttributes:@{ NSForegroundColorAttributeName : [UIColor colorWithWhite:1 alpha:0] }
+					range:NSMakeRange(0, numberOfInvisibleCharacters)
 				];
+
+				if (numberOfInvisibleCharacters > 0 && numberOfVisibleCharacters >= 1) {
+					CGFloat maxKerningAdjustement = [self captionFont].xHeight / 2;
+					CGFloat characterTime = (1 - (caption.length * t - numberOfVisibleCharacters));
+					[caption
+						addAttributes:@{
+							NSKernAttributeName : @(-maxKerningAdjustement * characterTime),
+							NSForegroundColorAttributeName : [self colorFromColor:captionColor withAlpha:1 - characterTime]
+						}
+						range:NSMakeRange(numberOfInvisibleCharacters, 1)
+					];
+				}
 			}
 
 			CGPoint startPoint = [self pointForBandWithIndex:bandIndex center:center angle:startAngle];
 			startPoint.x = TTWKRetinaRound(startPoint.x - (_captionPadding + _bandWidth * 0.5));
+			startPoint.y = TTWKRetinaRound(startPoint.y + _captionBaselineAdjustment);
 
 			CGSize size = [caption size];
 			[caption
 				drawAtPoint:CGPointMake(
 					startPoint.x - size.width,
-					TTWKRetinaRound(startPoint.y - size.height * 0.5)
+					roundf(startPoint.y - size.height * 0.5)
 				)
 			];
 		}
 	}
+
+	[self drawCenterTextForTime:time];
+
+	[self drawGuidelineForTime:time];
 
 	UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
 
@@ -372,8 +396,154 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 	return image;
 }
 
-- (UIFont *)captionFont {
-	return _font ?: [UIFont systemFontOfSize:13];
+- (void)drawCenterTextForTime:(NSTimeInterval)time {
+
+	if (!_largeText && !_smallText) {
+		return;
+	}
+
+	CGContextRef c = UIGraphicsGetCurrentContext();
+
+	CGPoint center = [self chartCenter];
+
+	CGFloat innerRadius = [self innerRadiusForBandWithIndex:_bands.count - 1];
+
+	// Side of the square full fitting the inner circle
+	CGFloat squareSize = floorf(2 * innerRadius / M_SQRT2);
+
+	CGRect squareRect = CGRectMake(
+		TTWKRetinaRound(center.x - squareSize * 0.5),
+		TTWKRetinaRound(center.y - squareSize * 0.5),
+		squareSize, squareSize
+	);
+
+	CGSize largeTextSize;
+	if (_largeText) {
+		largeTextSize = [_largeText size];
+		largeTextSize.height += _largeSmallTextPadding;
+	} else {
+		largeTextSize = CGSizeZero;
+	}
+
+	CGSize smallTextSize;
+	if (_smallText) {
+		smallTextSize = [_smallText size];
+	} else {
+		smallTextSize = CGSizeZero;
+	}
+
+	CGSize textSize = CGSizeMake(
+		MAX(largeTextSize.width, smallTextSize.width),
+		largeTextSize.height + smallTextSize.height
+	);
+
+	CGRect textRect = CGRectMake(
+		TTWKRetinaRound(squareRect.origin.x + (squareRect.size.width - textSize.width) * 0.5),
+		TTWKRetinaRound(squareRect.origin.y + (squareRect.size.height - textSize.height) * 0.5),
+		textSize.width, textSize.height
+	);
+
+	if (_largeText) {
+
+		CGRect r = CGRectMake(
+			TTWKRetinaRound(textRect.origin.x + (textRect.size.width - largeTextSize.width) * 0.5),
+			textRect.origin.y,
+			textRect.size.width,
+			largeTextSize.height
+		);
+
+		// Let's try to animate the characters of the large text.
+		NSMutableAttributedString *s = [[NSMutableAttributedString alloc] initWithAttributedString:_largeText];
+		for (NSInteger i = 0; i < s.length; i++) {
+			NSTimeInterval t = [self easeOut:
+				[self normalizedTimeForTime:time
+					// We want to start animation for each character with a bit of a delay
+					start:_animationDuration * 0.05 * (1 + i)
+					duration:_animationDuration * 0.5
+				]
+			];
+			[s
+				addAttribute:NSBaselineOffsetAttributeName
+				value:@(-largeTextSize.height * (1 - t))
+				range:NSMakeRange(i, 1)
+			];
+		}
+
+		CGContextSaveGState(c);
+		CGContextClipToRect(c, r);
+		[s drawInRect:r];
+		CGContextRestoreGState(c);
+	}
+
+	if (_smallText) {
+
+		// We need to animate the small text a little bit too by shifting it a bit
+		NSTimeInterval t = [self easeOut:[self normalizedTimeForTime:time start:0 duration:0.3 * _animationDuration]];
+		CGFloat smallTextShift = smallTextSize.height * 0.5;
+		
+		[_smallText
+			drawInRect:CGRectMake(
+				TTWKRetinaRound(textRect.origin.x + (textRect.size.width - smallTextSize.width) * 0.5),
+				TTWKRetinaRound(textRect.origin.y + largeTextSize.height) - smallTextShift * (1 - t),
+				textRect.size.width,
+				textRect.size.height - largeTextSize.height
+			)
+		];
+	}
+}
+
+- (void)drawGuidelineForTime:(NSTimeInterval)time {
+
+	if (!_guideline)
+		return;
+
+	// TODO: might make the start/duration of the animation as a parameter
+	NSTimeInterval t = [self easeOut:[self normalizedTimeForTime:time start:_animationDuration * 0.5 duration:_animationDuration * 0.5]];
+
+	CGContextRef c = UIGraphicsGetCurrentContext();
+
+	// TODO: adjust a bit, so the line sticks out a little
+
+	CGFloat innerRadius = [self innerRadiusForBandWithIndex:_bands.count - 1] - _guideline.extraBefore;
+	CGFloat outerRadius = [self outerRadiusForBandWithIndex:0] + _guideline.extraAfter;
+
+	// Let's animate it as well
+	outerRadius = innerRadius * (1 - t) + outerRadius * t;
+
+	CGFloat angle = _guideline.position * 2 * M_PI - M_PI_2;
+
+	CGPoint center = [self chartCenter];
+
+	CGPoint startPoint = CGPointMake(center.x + innerRadius * cos(angle), center.y + innerRadius * sin(angle));
+	CGPoint endPoint = CGPointMake(center.x + outerRadius * cos(angle), center.y + outerRadius * sin(angle));
+
+	CGContextMoveToPoint(c, startPoint.x, startPoint.y);
+	CGContextAddLineToPoint(c, endPoint.x, endPoint.y);
+
+	CGContextSetLineWidth(c, _guideline.lineWidth);
+	CGContextSetLineCap(c, _guideline.lineCap);
+
+	if (_guideline.lineDash) {
+		NSInteger count = _guideline.lineDash.count;
+		CGFloat *dash = calloc(count, sizeof(CGFloat));
+		if (!dash)
+			return;
+		for (NSInteger i = 0; i < count; i++) {
+			NSNumber *d = _guideline.lineDash[i];
+			NSAssert([d isKindOfClass:[NSNumber class]], @"");
+			dash[i] = [d floatValue];
+		}
+		CGContextSetLineDash(c, 0, dash, count);
+		free(dash);
+	}
+
+	UIColor *color = [self colorFromColor:_guideline.color withAlphaMultipliedBy:t];
+	[color setStroke];
+	CGContextDrawPath(c, kCGPathStroke);
+}
+
+- (UIFont *)effectiveCaptionFont {
+	return _captionFont ?: [UIFont systemFontOfSize:13];
 }
 
 @end
@@ -389,6 +559,24 @@ static inline CGFloat TTWKRetinaRoundHalf(x) {
 		_startColor = [UIColor colorWithRed:1.0000 green:0.0902 blue:0.0588 alpha:1.0];
 	}
 
+	return self;
+}
+
+@end
+
+
+@implementation TTWKPieChartGuideline
+
+- (id)init {
+	if (self = [super init]) {
+		_position = 0.3;
+		_color = [UIColor whiteColor];
+		_lineWidth = 1;
+		_lineCap = kCGLineCapButt;
+		_lineDash = @[ @(1), @(1) ];
+		_extraAfter = 2;
+		_extraBefore = 2;
+	}
 	return self;
 }
 
