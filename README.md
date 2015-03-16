@@ -2,7 +2,7 @@
 
 A component that simplifies creating of animated Apple Watch style pie charts similar to the ones used within the Activity app.
 
-![](Screenshot-AppleWatch.gif)
+<img src="Screenshot-AppleWatch.gif" alt="Screenshot" style="width: 153px"/>
 
 ## Quick Start
 
