@@ -1,6 +1,6 @@
 # TTWKPieChart
 
-A component that simplifies creating of animated Apple Watch style pie charts similar to the ones used within the Activity app.
+A component that simplifies the creation of animated Apple Watch style pie charts similar to the ones used within the Activity app.
 
 <img src="Screenshot-AppleWatch.gif" alt="Screenshot" style="width: 153px"/>
 
