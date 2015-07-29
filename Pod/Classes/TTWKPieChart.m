@@ -31,7 +31,7 @@ static inline CGFloat TTWKRetinaRound(x) {
 		_radius = 75;
 		_bandWidth = 16;
 		_bandSpacing = 1;
-		_animationDuration = 2;
+		_animationDuration = 1.5;
 		_captionPadding = 2;
 		_autoHideCaptions = YES;
 
@@ -224,6 +224,12 @@ static inline CGFloat TTWKRetinaRound(x) {
 			CGContextDrawPath(c, kCGPathEOFill);
 		}
 
+		// Only render the backgrounds at time 0, so the very first frame can be shown longer than the rest
+		// and serve as a placeholder image (i.e. if we would draw the band for time 0, then it would be a starting
+		// circle, which is not good to have on the placeholder image)
+		if (time == 0)
+			continue;
+
 		//
 		// The band
 		//
@@ -306,7 +312,7 @@ static inline CGFloat TTWKRetinaRound(x) {
 
 			// We do only simple fade in animation here
 
-			NSTimeInterval t = [self easeOut:[self normalizedTimeForTime:time start:0 duration:.3 * _animationDuration]];
+			NSTimeInterval t = [self easeOut:[self normalizedTimeForTime:time start:0 duration:.5 * _animationDuration]];
 
 			CGSize size = icon.size;
 			size.width *= t;
@@ -323,7 +329,10 @@ static inline CGFloat TTWKRetinaRound(x) {
 					size.height
 				)
 				blendMode:kCGBlendModeNormal
-				alpha:t
+				alpha:[self easeOut:[self normalizedTimeForTime:time
+					start:0.1 * _animationDuration
+					duration:0.5 * _animationDuration]
+				]
 			];
 		}
 
@@ -386,7 +395,6 @@ static inline CGFloat TTWKRetinaRound(x) {
 	}
 
 	[self drawCenterTextForTime:time];
-
 	[self drawGuidelineForTime:time];
 
 	UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
@@ -398,7 +406,7 @@ static inline CGFloat TTWKRetinaRound(x) {
 
 - (void)drawCenterTextForTime:(NSTimeInterval)time {
 
-	if (!_largeText && !_smallText) {
+	if ((!_largeText && !_smallText) || time == 0) {
 		return;
 	}
 
@@ -494,7 +502,7 @@ static inline CGFloat TTWKRetinaRound(x) {
 
 - (void)drawGuidelineForTime:(NSTimeInterval)time {
 
-	if (!_guideline)
+	if (!_guideline || time == 0)
 		return;
 
 	// TODO: might make the start/duration of the animation as a parameter
