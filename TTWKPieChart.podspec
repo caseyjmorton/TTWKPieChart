@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = "TTWKPieChart"
-  s.version          = "0.2.0"
+  s.version          = "0.2.1"
   s.summary          = "Animated Apple Watch pie chart aka activity aka progress view."
   s.description      = <<-DESC
                         A component that simplifies creating of animated Apple Watch style pie charts
